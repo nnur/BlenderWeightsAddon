@@ -23,8 +23,6 @@ def register():
 def unregister():
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
-        
-        
     bpy.utils.unregister_class(Object_set_weight)
 
 
@@ -35,7 +33,7 @@ class Object_set_weight(bpy.types.Operator):
     input_weight: bpy.props.FloatProperty(
         name="Weight", 
         description="Sets the weight of the selected vertices within the current vertex group",
-        default=random.random(), 
+        default=0.5, 
         soft_min=0.0, 
         soft_max=1.0
     )
@@ -46,9 +44,11 @@ class Object_set_weight(bpy.types.Operator):
             mesh = context.object.data
             active_vertex_group = context.object.vertex_groups.active
             selected_vertices = [vertex.index for vertex in mesh.vertices if vertex.select]
-
-            
-            active_vertex_group.add(selected_vertices, input_weight, "REPLACE")
+            distance = self.mouse_x - self.prev_mouse_x
+            if abs(distance) > 10:
+                mode = "ADD" if distance > 0 else "SUBTRACT"
+                active_vertex_group.add(selected_vertices, 0.05, mode)
+                self.prev_mouse_x = self.mouse_x
             bpy.ops.object.mode_set(mode='EDIT')
 
 
@@ -56,10 +56,28 @@ class Object_set_weight(bpy.types.Operator):
         self.set_selected_weight(self.input_weight, context)
         return {"FINISHED"}
     
+    def modal(self, context, event):
+        if event.type == 'MOUSEMOVE':  # Apply
+            self.mouse_x = event.mouse_x
+            self.execute(context)
+        elif event.type == 'LEFTMOUSE':  # Confirm
+#            context.window_manager.invoke_props_dialog(self)
+            return {'FINISHED'}
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:  # Cancel
+            return {'CANCELLED'}
+        return {'RUNNING_MODAL'}
+    
+    def invoke(self, context, event):
+        self.mouse_x = event.mouse_x
+        self.prev_mouse_x = event.mouse_x
+        self.execute(context)
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
     
     @classmethod
     def poll(cls, context):
-        return context.mode == 'EDIT_MESH' and context.area.type == 'VIEW_3D'
+        return context.mode == 'EDIT_MESH'
 
 #if __name__ == "main":
 register()
+bpy.ops.object.set_weight('INVOKE_DEFAULT')
