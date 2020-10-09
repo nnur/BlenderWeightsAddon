@@ -11,20 +11,14 @@ bl_info = {
 
 addon_keymaps = []
 
-def register():
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    bpy.utils.register_class(Object_set_weight)
-    if kc:
-        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
-        kmi = km.keymap_items.new(Object_set_weight.bl_idname, type='W', value='PRESS', shift=True, alt=True)
-        addon_keymaps.append((km, kmi))
-
-def unregister():
-    for km, kmi in addon_keymaps:
-        km.keymap_items.remove(kmi)
-    bpy.utils.unregister_class(Object_set_weight)
-
+class Panel1(bpy.types.Panel):
+    bl_idname = "EDIT_PT_set_weights"
+    bl_label = "Adjust Weights"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOLS"
+ 
+    def draw(self, context):
+        self.layout.operator("object.set_weight", icon='MOD_VERTEX_WEIGHT', text="Adjust Weights Relatively")
 
 class Object_set_weight(bpy.types.Operator):
     bl_idname = "object.set_weight"
@@ -45,7 +39,7 @@ class Object_set_weight(bpy.types.Operator):
             active_vertex_group = context.object.vertex_groups.active
             selected_vertices = [vertex.index for vertex in mesh.vertices if vertex.select]
             distance = self.mouse_x - self.prev_mouse_x
-            if abs(distance) > 10:
+            if abs(distance) > 5:
                 mode = "ADD" if distance > 0 else "SUBTRACT"
                 active_vertex_group.add(selected_vertices, 0.05, mode)
                 self.prev_mouse_x = self.mouse_x
@@ -61,7 +55,6 @@ class Object_set_weight(bpy.types.Operator):
             self.mouse_x = event.mouse_x
             self.execute(context)
         elif event.type == 'LEFTMOUSE':  # Confirm
-#            context.window_manager.invoke_props_dialog(self)
             return {'FINISHED'}
         elif event.type in {'RIGHTMOUSE', 'ESC'}:  # Cancel
             return {'CANCELLED'}
@@ -78,6 +71,23 @@ class Object_set_weight(bpy.types.Operator):
     def poll(cls, context):
         return context.mode == 'EDIT_MESH'
 
-#if __name__ == "main":
+
+def register():
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    bpy.utils.register_class(Object_set_weight)
+    bpy.utils.register_class(Panel1)
+    if kc:
+        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+        kmi = km.keymap_items.new(Object_set_weight.bl_idname, type='W', value='PRESS', ctrl=True)
+        addon_keymaps.append((km, kmi))
+
+def unregister():
+    for km, kmi in addon_keymaps:
+        km.keymap_items.remove(kmi)
+    bpy.utils.unregister_class(Object_set_weight)
+
+    bpy.utils.unregister_class(Panel1)
+
 register()
 bpy.ops.object.set_weight('INVOKE_DEFAULT')
