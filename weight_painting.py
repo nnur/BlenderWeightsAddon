@@ -11,26 +11,28 @@ bl_info = {
 
 addon_keymaps = []
 
-class Panel1(bpy.types.Panel):
-    bl_idname = "EDIT_PT_set_weights"
+class VIEW3D_PT_set_weights(bpy.types.Panel):
+    bl_idname = "VIEW3D_PT_set_weights"
     bl_label = "Adjust Weights"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
  
     def draw(self, context):
-        self.layout.operator("object.set_weight", icon='MOD_VERTEX_WEIGHT', text="Adjust Weights Relatively")
+        self.layout.operator("object.set_weight", icon='COLORSET_02_VEC', text="Adjust Weights Relatively")
 
 class Object_set_weight(bpy.types.Operator):
     bl_idname = "object.set_weight"
     bl_label = "Set Weight of Selected Vertices"
     bl_options = {"REGISTER", "UNDO"}
-    input_weight: bpy.props.FloatProperty(
-        name="Weight", 
-        description="Sets the weight of the selected vertices within the current vertex group",
-        default=0.5, 
-        soft_min=0.0, 
-        soft_max=1.0
-    )
+    bl_description = "Adjust weights of vertices within the currently selected vertex group"
+    input_weight = 0
+    # input_weight: bpy.props.FloatProperty(
+    #     name="Weight", 
+    #     description="Sets the weight of the selected vertices within the current vertex group",
+    #     default=0.5, 
+    #     soft_min=0.0, 
+    #     soft_max=1.0
+    # )
     
     def set_selected_weight(self, input_weight, context):
         if(bpy.context.mode == 'EDIT_MESH'):
@@ -71,12 +73,15 @@ class Object_set_weight(bpy.types.Operator):
     def poll(cls, context):
         return context.mode == 'EDIT_MESH'
 
+def menu_draw(self, context):
+    self.layout.operator(Object_set_weight.bl_idname)
 
 def register():
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     bpy.utils.register_class(Object_set_weight)
-    bpy.utils.register_class(Panel1)
+    # bpy.utils.register_class(VIEW3D_PT_set_weights)
+    bpy.types.WM_MT_toolsystem.append(menu_draw)
     if kc:
         km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
         kmi = km.keymap_items.new(Object_set_weight.bl_idname, type='W', value='PRESS', ctrl=True)
@@ -86,8 +91,9 @@ def unregister():
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
     bpy.utils.unregister_class(Object_set_weight)
+    bpy.types.WM_MT_toolsystem_submenu.remove(menu_draw)
 
-    bpy.utils.unregister_class(Panel1)
+    # bpy.utils.unregister_class(VIEW3D_PT_set_weights)
 
 register()
 bpy.ops.object.set_weight('INVOKE_DEFAULT')
