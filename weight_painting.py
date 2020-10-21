@@ -11,14 +11,23 @@ bl_info = {
 
 addon_keymaps = []
 
-class VIEW3D_PT_set_weights(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_set_weights"
-    bl_label = "Adjust Weights"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOLS"
- 
-    def draw(self, context):
-        self.layout.operator("object.set_weight", icon='COLORSET_02_VEC', text="Adjust Weights Relatively")
+class SetWeightTool(bpy.types.WorkSpaceTool):
+    bl_space_type='VIEW_3D'
+    bl_context_mode='EDIT_MESH'
+
+    # The prefix of the idname should be your add-on name.
+    bl_idname = "object.set_weight"
+    bl_label = "Set Weight"
+    bl_options = {'REGISTER', 'UNDO'}
+    bl_description = (
+        "Adjust weights of vertices within the currently selected vertex group"
+    )
+    bl_icon = "ops.generic.select_circle"
+    bl_widget = None
+    # bl_keymap = (
+    #     ("mesh.looptools_circle", {"type": 'LEFTMOUSE', "value": 'PRESS'},
+    # {"properties": [("custom_radius", False), ("radius", 1)]}),
+    #     )
 
 class Object_set_weight(bpy.types.Operator):
     bl_idname = "object.set_weight"
@@ -73,15 +82,12 @@ class Object_set_weight(bpy.types.Operator):
     def poll(cls, context):
         return context.mode == 'EDIT_MESH'
 
-def menu_draw(self, context):
-    self.layout.operator(Object_set_weight.bl_idname)
 
 def register():
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     bpy.utils.register_class(Object_set_weight)
-    # bpy.utils.register_class(VIEW3D_PT_set_weights)
-    bpy.types.WM_MT_toolsystem.append(menu_draw)
+    bpy.utils.register_tool(SetWeightTool, after={"builtin.scale_cage"}, separator=True, group=False)
     if kc:
         km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
         kmi = km.keymap_items.new(Object_set_weight.bl_idname, type='W', value='PRESS', ctrl=True)
@@ -91,9 +97,8 @@ def unregister():
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
     bpy.utils.unregister_class(Object_set_weight)
-    bpy.types.WM_MT_toolsystem_submenu.remove(menu_draw)
+    bpy.utils.unregister_class(SetWeightTool)
 
-    # bpy.utils.unregister_class(VIEW3D_PT_set_weights)
 
 register()
-bpy.ops.object.set_weight('INVOKE_DEFAULT')
+# bpy.ops.object.set_weight('INVOKE_DEFAULT')
