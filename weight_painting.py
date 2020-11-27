@@ -63,8 +63,7 @@ class Object_set_weight(bpy.types.Operator):
         self.mouse_y = event.mouse_y
         self.prev_mouse_x = event.mouse_x
         self.prev_mouse_y = event.mouse_y
-
-        # self.make_selected_vertices(context)
+        self.og_vertices = {}
         self.execute(context)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -73,7 +72,6 @@ class Object_set_weight(bpy.types.Operator):
         mesh = context.object.data
         self.active_vertex_group = context.object.vertex_groups.active
         self.selected_vertices = {}
-        self.og_vertices = {}
         not_in_group = True
         for vertex in mesh.vertices:
             if vertex.select:
