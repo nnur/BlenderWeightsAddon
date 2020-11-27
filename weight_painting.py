@@ -28,14 +28,11 @@ class Object_set_weight(bpy.types.Operator):
     def set_selected_weight(self, input_weight, context):
         if(bpy.context.mode == 'EDIT_MESH'):
             bpy.ops.object.mode_set(mode='OBJECT')
-            mesh = context.object.data
-            active_vertex_group = context.object.vertex_groups.active
-            selected_vertices = [vertex.index for vertex in mesh.vertices if vertex.select]
             distance = ((self.mouse_x - self.prev_mouse_x) ** 2 + (self.mouse_y - self.prev_mouse_y) ** 2) ** 0.5
             direction = self.mouse_x - self.prev_mouse_x + self.mouse_y - self.prev_mouse_y
             if abs(distance) > 10:
                 mode = "ADD" if direction > 0 else "SUBTRACT"
-                active_vertex_group.add(selected_vertices, 0.05, mode)
+                self.active_vertex_group.add(list(self.selected_vertices.keys()), 0.05, mode)
                 self.prev_mouse_x = self.mouse_x
                 self.prev_mouse_y = self.mouse_y
             bpy.ops.object.mode_set(mode='EDIT')
@@ -52,7 +49,10 @@ class Object_set_weight(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':  # Confirm
             return {'FINISHED'}
         elif event.type in {'RIGHTMOUSE', 'ESC'}:  # Cancel
+            for index, weight in self.og_vertices:
+                self.active_vertex_group.add([index], weight, "REPLACE")
             return {'CANCELLED'}
+
         return {'RUNNING_MODAL'}
     
     def invoke(self, context, event):
@@ -60,6 +60,19 @@ class Object_set_weight(bpy.types.Operator):
         self.mouse_y = event.mouse_y
         self.prev_mouse_x = event.mouse_x
         self.prev_mouse_y = event.mouse_y
+
+        mesh = context.object.data
+        self.active_vertex_group = context.object.vertex_groups.active
+        self.selected_vertices = {}
+        self.og_vertices = {}
+        for vertex in mesh.vertices:
+            if vertex.select:
+                for group in vertex.groups:
+                    if group.group == self.active_vertex_group.index:
+                        self.selected_vertices[vertex.index] = group.weight
+                        self.og_vertices[vertex.index] = group.weight
+                        break
+
         self.execute(context)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -83,11 +96,11 @@ class SetWeightTool(bpy.types.WorkSpaceTool):
     bl_widget = "VIEW3D_GGT_tool_generic_handle_normal"
     bl_keymap = (
         (Object_set_weight.bl_idname, {"type": 'LEFTMOUSE', "value": 'PRESS'},
-         {"properties": [("wait_for_input", False)]}),
+         {"properties": []}),
     )
     def draw_settings(context, layout, tool):
         props = tool.operator_properties("object.set_weight")
-        layout.prop(props, "mode")
+        # layout.prop(props, "mode")
 
 def register():
     wm = bpy.context.window_manager
