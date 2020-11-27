@@ -30,14 +30,15 @@ class Object_set_weight(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
             distance = ((self.mouse_x - self.prev_mouse_x) ** 2 + (self.mouse_y - self.prev_mouse_y) ** 2) ** 0.5
             direction = self.mouse_x - self.prev_mouse_x + self.mouse_y - self.prev_mouse_y
-            if abs(distance) > 10:
+            if abs(distance) > 5:
                 mode = "ADD" if direction > 0 else "SUBTRACT"
                 self.active_vertex_group.add(list(self.selected_vertices.keys()), 0.05, mode)
-                self.prev_mouse_x = self.mouse_x
-                self.prev_mouse_y = self.mouse_y
+            self.prev_mouse_x = self.mouse_x
+            self.prev_mouse_y = self.mouse_y
             bpy.ops.object.mode_set(mode='EDIT')
 
     def execute(self, context):
+        self.make_selected_vertices(context)
         self.set_selected_weight(self.input_weight, context)
         return {"FINISHED"}
     
@@ -49,8 +50,10 @@ class Object_set_weight(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':  # Confirm
             return {'FINISHED'}
         elif event.type in {'RIGHTMOUSE', 'ESC'}:  # Cancel
-            for index, weight in self.og_vertices:
+            bpy.ops.object.mode_set(mode='OBJECT')
+            for index, weight in self.og_vertices.items():
                 self.active_vertex_group.add([index], weight, "REPLACE")
+            bpy.ops.object.mode_set(mode='EDIT')
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}
@@ -61,21 +64,31 @@ class Object_set_weight(bpy.types.Operator):
         self.prev_mouse_x = event.mouse_x
         self.prev_mouse_y = event.mouse_y
 
+        # self.make_selected_vertices(context)
+        self.execute(context)
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+    
+    def make_selected_vertices(self, context):
         mesh = context.object.data
         self.active_vertex_group = context.object.vertex_groups.active
         self.selected_vertices = {}
         self.og_vertices = {}
+        not_in_group = True
         for vertex in mesh.vertices:
             if vertex.select:
                 for group in vertex.groups:
                     if group.group == self.active_vertex_group.index:
                         self.selected_vertices[vertex.index] = group.weight
-                        self.og_vertices[vertex.index] = group.weight
+                        if vertex.index not in self.og_vertices:
+                            self.og_vertices[vertex.index] = group.weight
+                        not_in_group = False
                         break
-
-        self.execute(context)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
+                if not_in_group is True:
+                    self.selected_vertices[vertex.index] = 0
+                    if vertex.index not in self.og_vertices:
+                        self.og_vertices[vertex.index] = 0
+                not_in_group = True
     
     @classmethod
     def poll(cls, context):
