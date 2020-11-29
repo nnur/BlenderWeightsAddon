@@ -3,6 +3,7 @@ import bmesh
 import os
 import random
 
+
 bl_info = {
     "name": "Set Weight of Selected Vertices",
     "blender": (2,82,0),
@@ -11,7 +12,7 @@ bl_info = {
 
 addon_keymaps = []
 
-class Object_adjust_weight(bpy.types.Operator):
+class ObjectAdjustWeight(bpy.types.Operator):
     bl_idname = "object.adjust_weight"
     bl_label = "Adjust Weight of Selected Vertices"
     bl_options = {"REGISTER", "UNDO"}
@@ -89,7 +90,7 @@ class AdjustWeightTool(bpy.types.WorkSpaceTool):
     bl_space_type='VIEW_3D'
     bl_context_mode='EDIT_MESH'
 
-    bl_idname = Object_adjust_weight.bl_idname
+    bl_idname = ObjectAdjustWeight.bl_idname
     bl_label = "Adjust Weight"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = (
@@ -98,23 +99,93 @@ class AdjustWeightTool(bpy.types.WorkSpaceTool):
     bl_icon = "ops.paint.weight_gradient"
     bl_widget = "VIEW3D_GGT_tool_generic_handle_normal"
     bl_keymap = (
-        (Object_adjust_weight.bl_idname, {"type": 'LEFTMOUSE', "value": 'PRESS'},
+        (ObjectAdjustWeight.bl_idname, {"type": 'LEFTMOUSE', "value": 'PRESS'},
          {"properties": []}),
     )
     def draw_settings(context, layout, tool):
-        props = tool.operator_properties(Object_adjust_weight.bl_idname)
+        props = tool.operator_properties(ObjectAdjustWeight.bl_idname)
+
+
+# class DB():
+#     is_changed = False
+
+#     @classmethod
+
+def changed(self, context):
+    self.is_changed = True
+
+class ObjectSetWeight(bpy.types.Operator):
+
+    bl_idname = "ob.set_weight"
+    bl_label = "Set Weight of Selected Vertices"
+    bl_options = {"REGISTER", "UNDO"}
+    is_changed = bpy.props.BoolProperty(options={'HIDDEN'})
+    input_weight = bpy.props.FloatProperty(
+            name="Weight",
+            soft_min=0.0,
+            soft_max=1.0,
+            update=changed
+        )
+    
+    def execute(self, context):
+        if(bpy.context.mode == 'EDIT_MESH') and self.is_changed:
+            bpy.ops.object.mode_set(mode='OBJECT')
+            mesh = context.object.data
+            active_vertex_group = context.object.vertex_groups.active
+            selected_vertices = [v.index for v in mesh.vertices if v.select]
+            active_vertex_group.add(selected_vertices, self.input_weight, "REPLACE")
+            self.last_weight = self.input_weight
+            self.is_changed = False
+            bpy.ops.object.mode_set(mode='EDIT')
+
+        return {'FINISHED'}
+
+    # def invoke(self, context, event):
+    #     return self.execute(context)
+        # wm = context.window_manager
+        # return wm.invoke_props_popup(self, event)
+
+    # @classmethod
+    # def changed(cls, context):
+    #     cls.is_changed = True
+
+
+class SetWeightTool(bpy.types.WorkSpaceTool):
+    bl_space_type='VIEW_3D'
+    bl_context_mode='EDIT_MESH'
+
+    bl_idname = ObjectSetWeight.bl_idname
+    bl_label = "Set Weight"
+    bl_options = {'REGISTER', 'UNDO'}
+    bl_description = (
+        "Set weights of vertices within the currently selected vertex group"
+    )
+    bl_icon = "ops.paint.weight_sample"
+    bl_keymap = (
+        (ObjectSetWeight.bl_idname, {"type": 'W', "value": 'PRESS'},
+         {"properties": []}),
+    )
+    def draw_settings(context, layout, tool):
+        props = tool.operator_properties(ObjectSetWeight.bl_idname)
+
+
+
 
 def register():
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
-    bpy.utils.register_class(Object_adjust_weight)
-    bpy.utils.register_tool(AdjustWeightTool, after={"builtin.measure"}, separator=True)
+    bpy.utils.register_class(ObjectAdjustWeight)
+    bpy.utils.register_class(ObjectSetWeight)
+    bpy.utils.register_tool(AdjustWeightTool, after={"builtin.measure"}, separator=True, group=True)
+    bpy.utils.register_tool(SetWeightTool, after={AdjustWeightTool.bl_idname})
 
 def unregister():
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
-    bpy.utils.unregister_class(Object_adjust_weight)
+    bpy.utils.unregister_class(ObjectAdjustWeight)
+    bpy.utils.unregister_class(ObjectSetWeight)
     bpy.utils.unregister_class(AdjustWeightTool)
+    bpy.utils.unregister_class(SetWeightTool)
 
 
 register()
