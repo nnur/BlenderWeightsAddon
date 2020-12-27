@@ -9,8 +9,8 @@ This add-on will only appear in Edit mode. It will be under 'Measure' in the mai
 ![](painting.gif)
 
 ### Install:
-Download weight_painting.py
-Edit -> Preferences -> Add Ons
-Click Install
-Select weight_painting.py and click Install
+Download weight_painting.py \
+Edit -> Preferences -> Add Ons \
+Click Install \
+Select weight_painting.py and click Install 
 
